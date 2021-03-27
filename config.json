@@ -1,0 +1,12 @@
+{
+  "env_name": "LunarLanderContinuous-v2",
+
+  "ddpg_kwargs": {
+    "gamma": 0.99,
+    "rho": 0.001
+  },
+
+  "train_kwargs": {
+
+  }
+}
