@@ -8,7 +8,7 @@ from tools import device, project_folder
 
 class TD3:
     def __init__(self, state_dim, action_dim, gamma=0.99, rho=0.005, min_action=-1, max_action=1, noise_std=0.2,
-                 noise_clip=0.5, actor_lr=1e-3, critic_lr=1e-3, actor_wd=0, critic_wd=1e-2, buffer_size=int(1e5)):
+                 noise_clip=0.5, actor_lr=1e-3, critic_lr=1e-3, actor_wd=0, critic_wd=0, buffer_size=int(1e5)):
         self.gamma = gamma
         self.rho = rho
         self.min_action = min_action
@@ -30,15 +30,16 @@ class TD3:
         self.critic.to(device)
         self.target_critic.to(device)
 
-        self.target_actor.eval()
-        self.target_critic.eval()
+        # self.target_actor.eval()
+        # self.target_critic.eval()
 
         self.buffer = DDPGBuffer(buffer_size)
 
     def compute_target_action(self, next_state):
-        action = self.target_actor(next_state)
-        noise = torch.empty_like(action).data.normal_(0, self.noise_std).to(device).clamp(-self.noise_clip, self.noise_clip)
-        return (action + noise).clamp(self.min_action, self.max_action)
+        with torch.no_grad():
+            action = self.target_actor(next_state)
+            noise = torch.empty_like(action).data.normal_(0, self.noise_std).to(device).clamp(-self.noise_clip, self.noise_clip)
+            return (action + noise).clamp(self.min_action, self.max_action)
 
     def compute_actor_loss(self, state):
         loss = - self.critic.Q1(state, self.actor(state)).mean()
@@ -47,13 +48,15 @@ class TD3:
     def compute_critic_loss(self, state, action, reward, next_state, terminal):
         predicted_q1, predicted_q2 = self.critic(state, action)
         target_action = self.compute_target_action(next_state)
-        target_q = torch.minimum(*self.target_critic(next_state, target_action))
-        target_q = reward + (self.gamma * target_q * terminal.logical_not()).detach()
+        with torch.no_grad():
+            target_q = torch.minimum(*self.target_critic(next_state, target_action))
+            target_q = reward + self.gamma * target_q * terminal.logical_not()
         loss = F.mse_loss(predicted_q1, target_q) + F.mse_loss(predicted_q2, target_q)
         return loss
 
     def update_actor(self, state):
         actor_loss = self.compute_actor_loss(state)
+
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()
@@ -61,6 +64,7 @@ class TD3:
 
     def update_critic(self, state, action, reward, next_state, terminal):
         critic_loss = self.compute_critic_loss(state, action, reward, next_state, terminal)
+
         self.critic_optim.zero_grad()
         critic_loss.backward()
         self.critic_optim.step()
@@ -74,8 +78,8 @@ class TD3:
 
     def soft_update(self, source_net, target_net):
         for source_param, target_param in zip(source_net.parameters(), target_net.parameters()):
-            target_param.data.mul_(self.rho)
-            target_param.data.add_((1 - self.rho) * source_param.data)
+            target_param.data.mul_(1 - self.rho)
+            target_param.data.add_(self.rho * source_param.data)
 
     def update(self, batch, step, actor_delay):
         state, action, reward, next_state, terminal = batch

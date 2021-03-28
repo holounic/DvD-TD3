@@ -1,5 +1,5 @@
 {
-  "env_name": "AntBulletEnv-v0",
+  "env_name": "Ant-v2",
 
   "ddpg_kwargs": {
     "gamma": 0.99,
