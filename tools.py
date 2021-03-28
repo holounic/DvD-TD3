@@ -1,5 +1,6 @@
 import torch
 import gym
+import pybullet_envs
 from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

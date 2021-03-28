@@ -7,10 +7,14 @@ from tools import device, project_folder
 
 
 class TD3:
-    def __init__(self, state_dim, action_dim, gamma=0.99, rho=0.001,
-                 actor_lr=1e-4, critic_lr=1e-3, actor_wd=0, critic_wd=1e-2, buffer_size=int(1e5)):
+    def __init__(self, state_dim, action_dim, gamma=0.99, rho=0.005, min_action=-1, max_action=1, noise_std=0.2,
+                 noise_clip=0.5, actor_lr=1e-3, critic_lr=1e-3, actor_wd=0, critic_wd=1e-2, buffer_size=int(1e5)):
         self.gamma = gamma
         self.rho = rho
+        self.min_action = min_action
+        self.max_action = max_action
+        self.noise_std = noise_std
+        self.noise_clip = noise_clip
 
         self.actor = Actor(state_dim, action_dim)
         self.target_actor = Actor(state_dim, action_dim)
@@ -31,46 +35,22 @@ class TD3:
 
         self.buffer = DDPGBuffer(buffer_size)
 
+    def compute_target_action(self, next_state):
+        action = self.target_actor(next_state)
+        noise = torch.empty_like(action).data.normal_(0, self.noise_std).to(device).clamp(-self.noise_clip, self.noise_clip)
+        return (action + noise).clamp(self.min_action, self.max_action)
+
     def compute_actor_loss(self, state):
-        loss = - self.critic(state, self.actor(state)).mean()
+        loss = - self.critic.Q1(state, self.actor(state)).mean()
         return loss
 
     def compute_critic_loss(self, state, action, reward, next_state, terminal):
-        predicted_q = self.critic(state, action)
-        target_predicted_q = self.target_critic(next_state, self.target_actor(next_state))
-        target_q = reward + self.gamma * target_predicted_q * terminal.logical_not()
-        loss = F.mse_loss(predicted_q, target_q)
+        predicted_q1, predicted_q2 = self.critic(state, action)
+        target_action = self.compute_target_action(next_state)
+        target_q = torch.minimum(*self.target_critic(next_state, target_action))
+        target_q = reward + (self.gamma * target_q * terminal.logical_not()).detach()
+        loss = F.mse_loss(predicted_q1, target_q) + F.mse_loss(predicted_q2, target_q)
         return loss
-
-    def act(self, state):
-        state = torch.from_numpy(state).to(device)
-        with torch.no_grad():
-            action = self.actor(state)
-        return action.cpu().numpy()
-
-    def save_transition(self, state, action, reward, next_state, terminal):
-        self.buffer.save_transition((state, action, reward, next_state, terminal))
-
-    def update(self, batch, step, actor_delay):
-        state, action, reward, next_state, terminal = batch
-        state = torch.tensor(state, dtype=torch.float32, device=device)
-        action = torch.tensor(action, dtype=torch.float32, device=device)
-        reward = torch.tensor(reward, dtype=torch.float32, device=device).view(-1, 1)
-        next_state = torch.tensor(next_state, dtype=torch.float32, device=device)
-        terminal = torch.tensor(terminal, device=device).view(-1, 1)
-
-        critic_loss = self.update_critic(state, action, reward, next_state, terminal)
-        actor_loss = torch.zeros(0)
-
-        if step % actor_delay == 0:
-            self.critic.eval()
-            actor_loss = self.update_actor(state)
-            self.critic.train()
-
-            self.update_target_actor()
-            self.update_target_critic()
-
-        return actor_loss, critic_loss
 
     def update_actor(self, state):
         actor_loss = self.compute_actor_loss(state)
@@ -97,6 +77,34 @@ class TD3:
             target_param.data.mul_(self.rho)
             target_param.data.add_((1 - self.rho) * source_param.data)
 
+    def update(self, batch, step, actor_delay):
+        state, action, reward, next_state, terminal = batch
+        state = torch.tensor(state, dtype=torch.float32, device=device)
+        action = torch.tensor(action, dtype=torch.float32, device=device)
+        reward = torch.tensor(reward, dtype=torch.float32, device=device).view(-1, 1)
+        next_state = torch.tensor(next_state, dtype=torch.float32, device=device)
+        terminal = torch.tensor(terminal, device=device).view(-1, 1)
+
+        critic_loss = self.update_critic(state, action, reward, next_state, terminal)
+        actor_loss = torch.zeros(1)
+
+        if step % actor_delay == 0:
+            actor_loss = self.update_actor(state)
+
+            self.update_target_actor()
+            self.update_target_critic()
+
+        return actor_loss, critic_loss
+
+    def act(self, state):
+        state = torch.from_numpy(state).to(device).float()
+        with torch.no_grad():
+            action = self.actor(state)
+        return action.cpu().numpy()
+
+    def save_transition(self, state, action, reward, next_state, terminal):
+        self.buffer.save_transition((state, action, reward, next_state, terminal))
+
     def eval(self):
         self.actor.eval()
         self.critic.eval()
@@ -105,7 +113,7 @@ class TD3:
         self.actor.train()
         self.critic.train()
 
-    def save(self):
-        torch.save(self.actor.state_dict(), project_folder + '/params/actor.pkl')
-        torch.save(self.critic.state_dict(), project_folder + '/params/critic.pkl')
+    def save(self, env_name):
+        torch.save(self.actor.state_dict(), project_folder + f'/params/{env_name}/actor.pkl')
+        torch.save(self.critic.state_dict(), project_folder + f'/params/{env_name}/critic.pkl')
         print('=====Model saved=====')

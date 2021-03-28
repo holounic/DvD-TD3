@@ -18,8 +18,8 @@ def log_train_info(actor_loss, critic_loss, score_mean, score_std, step):
     writer.flush()
 
 
-def train(env_name, agent, timesteps=int(5e6), test_every=int(1e3), start_train=int(1e4), actor_delay=int(1e3),
-          num_tests=10, batch_size=128, noise_clip=0.2):
+def train(env_name, agent, min_action=-1, max_action=1, timesteps=int(5e5), start_train=int(1e4), actor_delay=int(1e1),
+          num_tests=10, batch_size=100, noise_std=0.1, noise_clip=0.3, save_every=int(5e3)):
     env = make_env(env_name)
     done = False
     state = env.reset()
@@ -31,7 +31,8 @@ def train(env_name, agent, timesteps=int(5e6), test_every=int(1e3), start_train=
             done = False
             episodes += 1
         action = agent.act(state)
-        action = np.clip(action + np.clip(np.random.randn(*action.shape), -noise_clip, noise_clip), -1., 1.)
+        noise = np.random.normal(0, noise_std, *action.shape)
+        action = np.clip(action + np.clip(noise, -noise_clip, noise_clip), min_action, max_action)
         next_state, reward, done, _ = env.step(action)
         agent.save_transition(state, action, reward, next_state, done)
         state = next_state
@@ -43,8 +44,11 @@ def train(env_name, agent, timesteps=int(5e6), test_every=int(1e3), start_train=
             actor_loss_accum += actor_loss
             critic_loss_accum += critic_loss
 
-            if step % test_every == 0 or step == timesteps - 1:
+            if step % actor_delay == 0 or step == timesteps - 1:
                 agent.eval()
                 reward_mean, reward_std = test(agent, env_name, num_tests)
-                log_train_info(actor_loss_accum / test_every, critic_loss_accum / test_every, reward_mean, reward_std, step)
+                log_train_info(actor_loss_accum / actor_delay, critic_loss_accum / actor_delay, reward_mean, reward_std, step)
                 actor_loss_accum, critic_loss_accum = 0, 0
+
+            if step % save_every == 0 or step == timesteps - 1:
+                agent.save(env_name)
