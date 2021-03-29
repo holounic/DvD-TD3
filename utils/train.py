@@ -1,6 +1,7 @@
 import numpy as np
 from tools import make_env, writer
 from utils.test import test
+from td3.noise import Noise, ScheduledNoise
 
 
 def log_train_info(actor_loss, critic_loss, score_mean, score_std, step):
@@ -18,12 +19,18 @@ def log_train_info(actor_loss, critic_loss, score_mean, score_std, step):
     writer.flush()
 
 
-def train(env_name, agent, min_action=-1, max_action=1, timesteps=int(5e5), start_train=int(1e4), actor_delay=int(1e1),
-          num_tests=10, batch_size=100, noise_std=0.1, noise_clip=0.3, save_every=int(5e3)):
+def train(env_name, agent, min_action=-1, max_action=1, timesteps=int(5e5), start_train=int(1e4), actor_delay=int(10),
+          num_tests=10, batch_size=256, noise=None, save_every=int(5e3), log_every=int(1e3),
+          env_seed=0):
     env = make_env(env_name)
+    env.seed(env_seed)
+
     done = False
     state = env.reset()
     actor_loss_accum, critic_loss_accum, episodes = 0, 0, 0
+
+    if noise is None:
+        noise = Noise()
 
     for step in range(timesteps):
         if done:
@@ -31,8 +38,7 @@ def train(env_name, agent, min_action=-1, max_action=1, timesteps=int(5e5), star
             done = False
             episodes += 1
         action = agent.act(state)
-        noise = np.random.normal(0, noise_std, *action.shape)
-        action = np.clip(action + np.clip(noise, -noise_clip, noise_clip), min_action, max_action)
+        action = np.clip(action + noise.sample(action.shape), min_action, max_action)
         next_state, reward, done, _ = env.step(action)
         agent.save_transition(state, action, reward, next_state, done)
         state = next_state
@@ -44,7 +50,7 @@ def train(env_name, agent, min_action=-1, max_action=1, timesteps=int(5e5), star
             actor_loss_accum += actor_loss
             critic_loss_accum += critic_loss
 
-            if step % actor_delay == 0 or step == timesteps - 1:
+            if step % log_every == 0 or step == timesteps - 1:
                 agent.eval()
                 reward_mean, reward_std = test(agent, env_name, num_tests)
                 log_train_info(actor_loss_accum / actor_delay, critic_loss_accum / actor_delay, reward_mean, reward_std, step)

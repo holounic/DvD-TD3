@@ -2,7 +2,7 @@ import random
 from collections import deque
 
 
-class DDPGBuffer:
+class Buffer:
     def __init__(self, maxlen=int(1e5)):
         self.data = deque(maxlen=maxlen)
 

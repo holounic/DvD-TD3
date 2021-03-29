@@ -1,6 +1,6 @@
 import json
 from tools import get_env_info
-from TD3 import TD3
+from td3.algorithm import TD3
 from utils.train import train
 
 with open('config.json', 'r') as source:

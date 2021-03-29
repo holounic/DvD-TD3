@@ -1,8 +1,8 @@
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from DDPGBuffer import DDPGBuffer
-from Networks import Actor, Critic
+from td3.buffer import Buffer
+from td3.networks import Actor, Critic
 from tools import device, project_folder
 
 
@@ -30,10 +30,10 @@ class TD3:
         self.critic.to(device)
         self.target_critic.to(device)
 
-        # self.target_actor.eval()
-        # self.target_critic.eval()
+        self.target_actor.eval()
+        self.target_critic.eval()
 
-        self.buffer = DDPGBuffer(buffer_size)
+        self.buffer = Buffer(buffer_size)
 
     def compute_target_action(self, next_state):
         with torch.no_grad():
@@ -104,7 +104,7 @@ class TD3:
         state = torch.from_numpy(state).to(device).float()
         with torch.no_grad():
             action = self.actor(state)
-        return action.cpu().numpy()
+        return action.cpu().numpy().flatten()
 
     def save_transition(self, state, action, reward, next_state, terminal):
         self.buffer.save_transition((state, action, reward, next_state, terminal))
