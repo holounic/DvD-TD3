@@ -19,8 +19,8 @@ def log_train_info(actor_loss, critic_loss, score_mean, score_std, step):
     writer.flush()
 
 
-def train(env_name, agent, min_action=-1, max_action=1, timesteps=int(5e5), start_train=int(1e4), actor_delay=int(10),
-          num_tests=10, batch_size=256, noise=None, save_every=int(5e3), log_every=int(1e3),
+def train(env_name, agent, min_action=-1, max_action=1, timesteps=int(5e5), start_train=int(1e4), actor_delay=int(2),
+          num_tests=10, batch_size=100, noise=None, save_every=int(5e4), log_every=int(5e3),
           env_seed=0):
     env = make_env(env_name)
     env.seed(env_seed)

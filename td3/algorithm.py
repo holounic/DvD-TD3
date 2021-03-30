@@ -7,7 +7,7 @@ from tools import device, project_folder
 
 
 class TD3:
-    def __init__(self, state_dim, action_dim, gamma=0.99, rho=0.005, min_action=-1, max_action=1, noise_std=0.2,
+    def __init__(self, state_dim, action_dim, gamma=0.99, rho=0.005, min_action=-1, max_action=1, noise_std=0.1,
                  noise_clip=0.5, actor_lr=1e-3, critic_lr=1e-3, actor_wd=0, critic_wd=0, buffer_size=int(1e5)):
         self.gamma = gamma
         self.rho = rho
@@ -18,9 +18,11 @@ class TD3:
 
         self.actor = Actor(state_dim, action_dim)
         self.target_actor = Actor(state_dim, action_dim)
+        self.target_actor.load_state_dict(self.actor.state_dict())
 
         self.critic = Critic(state_dim, action_dim)
         self.target_critic = Critic(state_dim, action_dim)
+        self.target_critic.load_state_dict(self.critic.state_dict())
 
         self.actor_optim = optim.Adam(self.actor.parameters(), lr=actor_lr, weight_decay=actor_wd)
         self.critic_optim = optim.Adam(self.critic.parameters(), lr=critic_lr, weight_decay=critic_wd)
