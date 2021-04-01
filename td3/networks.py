@@ -39,15 +39,6 @@ class Critic(nn.Module):
         self.fc2_2 = nn.Linear(hid_size1, hid_size2)
         self.fc3_2 = nn.Linear(hid_size2, 1)
 
-        if init_layers:
-            weight_limit = 1. / ((state_dim + action_dim) * (state_dim + action_dim))
-            initialize_layer(self.fc1_1, weight_limit)
-            initialize_layer(self.fc2_1, weight_limit)
-            initialize_layer(self.fc3_1, 3e-3)
-            initialize_layer(self.fc1_2, weight_limit)
-            initialize_layer(self.fc2_2, weight_limit)
-            initialize_layer(self.fc3_2, 3e-3)
-
     def Q1(self, state, action):
         x = torch.cat((state, action), dim=1)
         x = F.relu(self.fc1_1(x))
