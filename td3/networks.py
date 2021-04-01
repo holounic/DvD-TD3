@@ -2,24 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-def initialize_layer(layer, limit=0.1):
-    layer.weight = nn.Parameter(
-        data=torch.distributions.uniform.Uniform(-limit, limit).sample(layer.weight.shape), requires_grad=True)
-
-
 class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim, hid_size1=400, hid_size2=300, init_layers=False):
+    def __init__(self, state_dim, action_dim, hid_size1=400, hid_size2=300):
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(state_dim, hid_size1)
         self.fc2 = nn.Linear(hid_size1, hid_size2)
         self.fc3 = nn.Linear(hid_size2, action_dim)
-
-        if init_layers:
-            weight_limit = 1. / (state_dim * state_dim)
-            initialize_layer(self.fc1, weight_limit)
-            initialize_layer(self.fc2, weight_limit)
-            initialize_layer(self.fc3, 1)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -29,7 +17,7 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim, hid_size1=400, hid_size2=300, init_layers=False):
+    def __init__(self, state_dim, action_dim, hid_size1=400, hid_size2=300):
         super(Critic, self).__init__()
         self.fc1_1 = nn.Linear(state_dim + action_dim, hid_size1)
         self.fc2_1 = nn.Linear(hid_size1, hid_size2)
