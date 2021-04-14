@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim, hid_size1=400, hid_size2=300):
+    def __init__(self, state_dim, action_dim, hid_size1=256, hid_size2=256):
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(state_dim, hid_size1)
         self.fc2 = nn.Linear(hid_size1, hid_size2)
@@ -17,7 +18,7 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim, hid_size1=400, hid_size2=300):
+    def __init__(self, state_dim, action_dim, hid_size1=256, hid_size2=256):
         super(Critic, self).__init__()
         self.fc1_1 = nn.Linear(state_dim + action_dim, hid_size1)
         self.fc2_1 = nn.Linear(hid_size1, hid_size2)

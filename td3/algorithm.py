@@ -8,7 +8,7 @@ from tools import device, project_folder
 
 class TD3:
     def __init__(self, state_dim, action_dim, gamma=0.99, rho=0.005, min_action=-1, max_action=1, noise_std=0.1,
-                 noise_clip=0.5, actor_lr=1e-3, critic_lr=1e-3, actor_wd=0, critic_wd=0, buffer_size=int(1e5)):
+                 noise_clip=0.5, actor_lr=1e-3, critic_lr=1e-3, actor_wd=0, critic_wd=0):
         self.gamma = gamma
         self.rho = rho
         self.min_action = min_action
@@ -34,8 +34,6 @@ class TD3:
 
         self.target_actor.eval()
         self.target_critic.eval()
-
-        self.buffer = Buffer(buffer_size)
 
     def compute_target_action(self, next_state):
         with torch.no_grad():
@@ -97,7 +95,7 @@ class TD3:
         if step % actor_delay == 0:
             actor_loss = self.update_actor(state)
 
-            self.update_target_actor()
+            # self.update_target_actor()
             self.update_target_critic()
 
         return actor_loss, critic_loss
@@ -107,9 +105,6 @@ class TD3:
         with torch.no_grad():
             action = self.actor(state)
         return action.cpu().numpy().flatten()
-
-    def save_transition(self, state, action, reward, next_state, terminal):
-        self.buffer.save_transition((state, action, reward, next_state, terminal))
 
     def eval(self):
         self.actor.eval()
