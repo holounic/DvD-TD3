@@ -1,6 +1,7 @@
 import torch
 import gym
 import pybullet_envs
+import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -35,16 +36,14 @@ def log_train_info(actor_loss, critic_loss, score_mean, score_std, step):
     writer.add_scalar('Score/std', score_std, step)
     writer.flush()
 
-    logger.write({'step': step, 'score_mean': score_mean, 'score_std': score_std})
-
 
 def unpack_batch(batch):
     state, action, reward, next_state, terminal = batch
-    state = torch.tensor(state, dtype=torch.float32, device=device)
-    action = torch.tensor(action, dtype=torch.float32, device=device)
-    reward = torch.tensor(reward, dtype=torch.float32, device=device).view(-1, 1)
-    next_state = torch.tensor(next_state, dtype=torch.float32, device=device)
-    terminal = torch.tensor(terminal, device=device).view(-1, 1)
+    state = torch.tensor(np.array(state), dtype=torch.float32, device=device)
+    action = torch.tensor(np.array(action), dtype=torch.float32, device=device)
+    reward = torch.tensor(np.array(reward), dtype=torch.float32, device=device).view(-1, 1)
+    next_state = torch.tensor(np.array(next_state), dtype=torch.float32, device=device)
+    terminal = torch.tensor(np.array(terminal), device=device).view(-1, 1)
     return state, action, reward, next_state, terminal
 
 
