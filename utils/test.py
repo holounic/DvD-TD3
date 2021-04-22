@@ -18,4 +18,4 @@ def test(agent, env_name, num_tests=10):
     rewards = []
     for _ in range(num_tests):
         rewards.append(play_episode(agent, env_name))
-    return np.mean(rewards), np.std(rewards)
+    return np.mean(rewards).item(), np.std(rewards).item()

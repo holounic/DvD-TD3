@@ -1,7 +1,7 @@
 {
   "env_name": "HalfCheetah-v2",
 
-  "ddpg_kwargs": {
+  "algo_kwargs": {
     "gamma": 0.99,
     "rho": 0.005
   },
