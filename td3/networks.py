@@ -7,7 +7,7 @@ class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, hid_sizes=None):
         nn.Module.__init__(self)
         if hid_sizes is None:
-            hid_sizes = [400, 300]
+            hid_sizes = [256, 256]
         hid_size1 = hid_sizes[0]
         hid_size2 = hid_sizes[1]
 
@@ -26,7 +26,7 @@ class Critic(nn.Module):
     def __init__(self, state_dim, action_dim, hid_sizes=None):
         nn.Module.__init__(self)
         if hid_sizes is None:
-            hid_sizes = [400, 300]
+            hid_sizes = [256, 256]
         hid_size1 = hid_sizes[0]
         hid_size2 = hid_sizes[1]
 

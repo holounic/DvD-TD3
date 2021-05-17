@@ -21,18 +21,9 @@ def log_train_info(actor_loss, critic_loss, score_mean, score_std, step):
     writer.flush()
 
 
-def acquire_knowledge(env, agent, state, noise, min_action, max_action, step, start_train):
-    if step > start_train:
-        action = agent.act(state)
-        action = np.clip(action + noise.sample(action.shape), min_action, max_action)
-    else:
-        action = env.action_space.sample()
-    next_state, reward, done, _ = env.step(action)
-    return state, action, reward, next_state, done
-
-
 def train(env_name, agent: DvDTD3, min_action=-1, max_action=1, timesteps=int(5e5), start_train=int(1e4),
-                 actor_delay=int(2), num_tests=10, batch_size=100, noise=None, save_every=int(5e4), log_every=int(1e3)):
+          use_bandit=True, actor_delay=2, num_tests=15, batch_size=100, noise=None, save_every=int(5e4),
+          log_every=int(1e3)):
     actor_loss_accum, critic_loss_accum, episodes = 0, 0, 0
 
     population_size = len(agent.population)
@@ -47,7 +38,10 @@ def train(env_name, agent: DvDTD3, min_action=-1, max_action=1, timesteps=int(5e
     if noise is None:
         noise = Noise()
 
-    bandit = BetaBernoulliBandit()
+    if use_bandit:
+        bandit = BetaBernoulliBandit()
+    else:
+        bandit = None
 
     for step in range(timesteps):
         for env, member, state in zip(envs, agent.population, states):
@@ -72,18 +66,26 @@ def train(env_name, agent: DvDTD3, min_action=-1, max_action=1, timesteps=int(5e
 
             agent.eval()
             reward_mean, reward_std = 0, 0
-            cur_num_tests = num_tests if step % log_every == 0 else 1
+
+            cur_num_tests = 0
+            if step % log_every == 0:
+                cur_num_tests = num_tests
+            elif use_bandit:
+                cur_num_tests = 1
+
             for member in agent.population:
                 cur_reward_mean, cur_reward_std = test(member, env_name, cur_num_tests)
                 reward_mean += cur_reward_mean
                 reward_std += cur_reward_std
+
             if step % log_every == 0:
                 log_train_info(actor_loss_accum * actor_delay / (log_every * population_size),
-                            critic_loss_accum / (population_size * log_every), reward_mean / population_size,
-                            reward_std / population_size, step)
+                               critic_loss_accum / (population_size * log_every), reward_mean / population_size,
+                               reward_std / population_size, step)
                 actor_loss_accum, critic_loss_accum = 0, 0
-            bandit.update_dist(reward_mean)
-            agent.diversity_importance = bandit.sample()
+            if use_bandit:
+                bandit.update_dist(reward_mean)
+                agent.diversity_importance = bandit.sample()
 
             if step % save_every == 0 or step == timesteps - 1:
-                agent.population[0].save(env_name)
+                agent.save(env_name)

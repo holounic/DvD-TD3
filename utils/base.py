@@ -1,10 +1,13 @@
 import torch
+from datetime import datetime
+import os
 from utils.tools import device, project_folder, unpack_batch
 
 
 class BaseActorCritic:
     def __init__(self):
         self.actor, self.critic = None, None
+        self.save_dir = str(datetime.now()).replace(' ', '_')
 
     def _extract_action(self, x):
         raise NotImplementedError()
@@ -32,7 +35,10 @@ class BaseActorCritic:
             action = self._extract_action(self.actor(state))
         return action.cpu().numpy().flatten()
 
-    def save(self, env_name):
-        torch.save(self.actor.state_dict(), project_folder + f'/params/{env_name}/{self._get_name()}/actor.pkl')
-        torch.save(self.critic.state_dict(), project_folder + f'/params/{env_name}/{self._get_name()}/critic.pkl')
+    def save(self, env_name, iteration='No', suffix=''):
+        dir = project_folder + f'/params/{env_name}/i_{iteration}'
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        torch.save(self.actor.state_dict(), dir + f'actor{suffix}.pkl')
+        torch.save(self.critic.state_dict(), dir + f'critic{suffix}.pkl')
         print('=====Model saved=====')

@@ -110,11 +110,12 @@ class TD3(BaseActorCritic):
 
 
 class DvDTD3:
-    def __init__(self, state_dim, action_dim, population_size=5, diversity_loss=DiversityLoss(),
-                 diversity_importance=0.3, gamma=0.99, rho=0.005, min_action=-1, max_action=1, noise_std=0.1,
+    def __init__(self, state_dim, action_dim, population_size=5, diversity_loss=DiversityLoss(), embedding_dim=20,
+                 diversity_importance=None, gamma=0.99, rho=0.005, min_action=-1, max_action=1, noise_std=0.1,
                  noise_clip=0.5, actor_lr=1e-3, critic_lr=1e-3, actor_wd=0, critic_wd=0, buffer_size=int(1e6),
                  actor_dims=None, critic_dims=None):
         self.diversity_loss = diversity_loss
+        self.embedding_dim = 20
         self.diversity_importance = diversity_importance
         self.buffer = Buffer(buffer_size)
         self.gamma = gamma
@@ -177,7 +178,7 @@ class DvDTD3:
             for agent, state in zip(self.population, states):
                 actor_losses = actor_losses + agent.compute_actor_loss(state)
 
-        state = unpack_batch(self.buffer.sample(20))[0]
+        state = unpack_batch(self.buffer.sample(self.embedding_dim))[0]
         if step % actor_delay == 0:
             actor_losses += self.diversity_importance * self.compute_population_loss(state)
             self.population_optim.zero_grad()
@@ -196,3 +197,7 @@ class DvDTD3:
     def eval(self):
         for agent in self.population:
             agent.eval()
+
+    def save(self, env_name, iteration):
+        for i, agent in enumerate(self.population):
+            agent.save(env_name, str(iteration), str(i))

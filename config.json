@@ -8,5 +8,12 @@
 
   "train_kwargs": {
 
+  },
+
+  "noise_kwargs": {
+    "mean": 0,
+    "std": 0.2,
+    "clip": 0.5
   }
+
 }
