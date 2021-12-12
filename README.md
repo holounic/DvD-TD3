@@ -2,7 +2,7 @@
 ## DvD-TD3 Pytorch Implementation
 
 ## Results
-| Environment | Number of updates | Mean Score |  Score std | Weights |
-| :----------: | :---------: | :---------: | :--------: |  :--------: |
-| Hopper-v2 | 120k | 1423.63 | 75.36 | [coming soon]() |
-| HalfCheetah-v2 | 45k | 4320 | 21 | [coming soon]() |
+| Environment | Number of updates | Mean Score |  Score std |
+| :----------: | :---------: | :---------: | :--------: 
+| Hopper-v2 | 120k | 1423.63 | 75.36 | 
+| HalfCheetah-v2 | 45k | 4320 | 21 |
